@@ -1,5 +1,4 @@
 #include "AT91SAM9263.h"
-#include "AT91SAM9263-EK.h"
 
 #define A 1<<25
 #define B 1<<24
@@ -9,43 +8,44 @@
 #define F 1<<27
 #define G 1<<26
 #define H 1<<23
-#define CLOCK 1<<4 //needed?
+//#define CLOCK 1<<4 //needed?
 #define BUTTON 1<<5
 #define LEFT 1<<28
 #define RIGHT 1<<30
-//#define ALL 1<<31
+#define ALL 1<<31
+#define TIME 500
 
 const int decoder[10] = 
 {
 
-        A|B|C|D|E|F,
-        B|C,
-        A|B|G|E|D,
-        A|B|G|C|D,
-        F|G|B|C,
-        A|F|G|C|D,
-        A|F|E|D|C|G,
-        A|B|C,
-        A|B|C|D|E|F|G,
-        A|B|C|D|F|G
+        A|B|C|D|E|F,	//0
+        B|C,		//1
+        A|B|G|E|D,	//2
+        A|B|G|C|D,	//3
+        F|G|B|C,	//4
+        A|F|G|C|D,	//5
+        A|F|E|D|C|G,	//6
+        A|B|C,		//7
+        A|B|C|D|E|F|G,	//8
+        A|B|C|D|F|G	//9
 };
 
 void initLED()
 {
 	//lights
-	AT91C_BASE_PIOB->PIO_PER = (A|B|C|D|E|F|G|H|LEFT|RIGHT/*|ALL*/);
-    AT91C_BASE_PIOB->PIO_OER = (A|B|C|D|E|F|G|H|LEFT|RIGHT/*|ALL*/);
-	AT91C_BASE_PIOB->PIO_CODR = (A|B|C|D|E|F|G|H|LEFT|RIGHT/*|All*/);
-    AT91C_BASE_PIOB->PIO_SODR = (TRight|TLeft);
+	AT91C_BASE_PIOB->PIO_PER = (A|B|C|D|E|F|G|H|LEFT|RIGHT|ALL);
+    	AT91C_BASE_PIOB->PIO_OER = (A|B|C|D|E|F|G|H|LEFT|RIGHT|ALL);
+	AT91C_BASE_PIOB->PIO_CODR = (A|B|C|D|E|F|G|H|ALL);
+   	AT91C_BASE_PIOB->PIO_SODR = (RIGHT|LEFT);
 	
 }
-
+/*
 void initCLOCK()
 {
 	//clock
 	AT91C_BASE_PMC->PMC_PCER = CLOCK;
 }
-
+*/
 void initBUTTON()
 {
 	//button
@@ -77,22 +77,22 @@ void delay(int a)
 
 void leftON()
 {
-	PIOB->PIO_CODR = (LEFT);
+	AT91C_BASE_PIOB->PIO_CODR = (LEFT);
 }
 
 void leftOFF()
 {
-	PIOB->PIO_SODR = (LEFT);
+	AT91C_BASE_PIOB->PIO_SODR = (LEFT);
 }
 
 void rightON()
 {
-	PIOB->PIO_CODR = (RIGHT);
+	AT91C_BASE_PIOB->PIO_CODR = (RIGHT);
 }
 
 void rightOFF()
 {
-	PIOB->PIO_SODR = (RIGHT);
+	AT91C_BASE_PIOB->PIO_SODR = (RIGHT);
 }
 
 /*
@@ -102,53 +102,50 @@ void buttonON()
 }
 */
 
+void display(int a, int b)
+{
+  volatile int yolo=0;
+	for(yolo = 0;yolo<100;yolo++)
+	{
+        clear();
+	rightON();
+        on(decoder[b]);
+        delay(6250);
+        off(decoder[b]);
+	delay(6250);	
+	rightOFF();
+	clear();
+	leftON();
+        on(decoder[a]);
+        delay(6250);
+	off(decoder[a]);	
+	delay(6250);
+	leftOFF();
+	}
+        
+}
+
 int main()
 {
-		volatile int iterator_p=0;
-		volatile int iterator_l=0;
-		initCLOCK();
-        initLED();
+		volatile int iterator=0;
+		//initCLOCK();
+        	initLED();
 		initBUTTON();
 
 		
         while(1)
-        {	
-			clear();
-			leftON();
-			on(decoder[iterator_l]);
-			leftOFF();
-			rightON();
-			on(decoder[iterator_p]);
-			rightOFF();
-			delay(500000);
-			if(!AT91C_BASE_PIOC->PIO_PDSR & 1<<5)//if(buttonON())
-			{
-				iterator_p--;
-				if(iterator_p<0)
-				{
-					iterator_p=9;
-					iterator_l--;
-					if(iterator_l<0 && iterator_p<0)
-					{
-						iterator_p = 0;
-						iterator_l = 0;
-					}
-				}
-			}
-			else
-			{
-				iterator_p++
-				if(iterator_p>9)
-				{
-					iterator_p=0;
-					iterator_l++;
-					if(iterator_l>9 && iterator_p>9)
-					{
-						iterator_p = 9;
-						iterator_l = 9;
-					}
-				}
-			}
+        {
+		
+		display(iterator/10,iterator%10);
+                if(!(AT91C_BASE_PIOC->PIO_PDSR & BUTTON))
+                        iterator--;
+                else
+                        iterator++;
+                if(iterator>99)
+                        iterator=99;
+                if(iterator<0)
+                        iterator=0;
+		
         }
 
 
